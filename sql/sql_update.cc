@@ -1897,11 +1897,13 @@ bool mysql_multi_update(THD *thd, TABLE_LIST *table_list, List<Item> *fields,
                         List<Item> *values, COND *conds, ulonglong options,
                         enum enum_duplicates handle_duplicates,
                         bool ignore, SELECT_LEX_UNIT *unit,
-                        SELECT_LEX *select_lex, multi_update **result)
+                        SELECT_LEX *select_lex, multi_update **result,
+                        select_result *returning_result)
 {
   bool res;
   DBUG_ENTER("mysql_multi_update");
-
+  SELECT_LEX   *returning= thd->lex->has_returning() ? thd->lex->returning() : 0;
+  
   if (!(*result= new (thd->mem_root) multi_update(thd, table_list,
                                  &thd->lex->first_select_lex()->leaf_tables,
                                  fields, values, handle_duplicates, ignore)))
@@ -1932,6 +1934,9 @@ bool mysql_multi_update(THD *thd, TABLE_LIST *table_list, List<Item> *fields,
     if (thd->lex->describe || thd->lex->analyze_stmt)
       res= thd->lex->explain->send_explain(thd);
   }
+  if (returning)
+    (void) returning_result->prepare(returning->item_list, NULL);
+
   thd->abort_on_warning= 0;
   DBUG_RETURN(res);
 }
