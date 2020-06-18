@@ -1,0 +1,65 @@
+--echo ####
+--echo ## MDEV-12326: TEST SUITE FOR MULTIPLE TABLE DELETE RETURNING
+--echo ####
+
+
+--echo ## Table and View Creation
+CREATE TABLE ANIMALS (name varchar(40) primary key, colour varchar(20) not null, weight int(4) not null );
+
+CREATE TABLE HABITAT (habitat_name varchar(40) primary key, animal_name varchar(40) not null );
+
+CREATE TABLE FOOD (food_name varchar(20) primary key, animal_name varchar(40) not null );
+
+--echo CREATE VIEW COLOR AS SELECT name,colour FROM ANIMALS ;
+
+--echo CREATE VIEW WEIGHT AS SELECT name,weight FROM ANIMALS;
+
+--echo ## Data Insertion
+
+INSERT INTO ANIMALS VALUES ('Penguins','CounterShade',23) , ('Polar Bear','White',450) , ('Toucan','Dark Blue',1) , ('Camel','Brown',600) , ('Reindeer','Grey',200) RETURNING *;
+
+INSERT INTO HABITAT VALUES ('Antarctica','Penguins') , ('Arctic','Polar Bear') , ('Rainforest','Toucan') , ('Desert','Camel') , ('Tundra','Reindeer') RETURNING *;
+
+INSERT INTO FOOD VALUES ('Fish','Penguins') , ('Seals','Polar Bear') , ('Fruits','Toucan') , ('Oats','Camel') , ('Herbs','Reindeer') RETURNING *;
+
+--echo ## MULTIPLE TABLE DELETE RETURNING TEST CASES
+
+DELETE FROM ANIMALS USING ANIMALS,FOOD WHERE ANIMALS.name=FOOD.animal_name and FOOD.food_name LIKE 'H%' RETURNING ANIMALS.name,ANIMALS.colour,FOOD.food_name,UPPER(FOOD.animal_name); 
+
+DELETE FROM ANIMALS USING ANIMALS,FOOD WHERE ANIMALS.name=FOOD.animal_name and Animals.colour='White' RETURNING ANIMALS.weight,ANIMALS.weight+ANIMALS.weight,FOOD.food_name,UPPER(FOOD.animal_name); 
+
+DELETE FROM ANIMALS USING ANIMALS,HABITAT,FOOD WHERE ANIMALS.name=FOOD.animal_name and FOOD.food_name LIKE '_Z%' RETURNING *;
+
+DELETE FROM HABITAT USING ANIMALS,HABITAT,FOOD WHERE ANIMALS.name=FOOD.animal_name and FOOD.food_name LIKE 'H%' RETURNING *;
+
+--echo DELETE FROM COLOR USING COLOR,FOOD WHERE COLOR.name=FOOD.animal_name and FOOD.food_name LIKE 'H%' RETURNING COLOR.name;
+
+INSERT INTO HABITAT VALUES ('Antarctica','Penguins') , ('Arctic','Polar Bear') , ('Rainforest','Toucan') , ('Desert','Camel') , ('Tundra','Reindeer');
+
+--echo ## I suppose nothing should be explicitly returned in the below test cases even if RETURNING is present in the query;
+
+ANALYZE DELETE FROM HABITAT USING ANIMALS,HABITAT,FOOD WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Tundra' RETURNING *;
+
+ANALYZE DELETE FROM HABITAT USING ANIMALS,HABITAT,FOOD WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Tundra' RETURNING *;
+
+EXPLAIN DELETE FROM HABITAT USING ANIMALS,HABITAT,FOOD WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Rainforest' RETURNING *;
+
+EXPLAIN DELETE FROM HABITAT USING ANIMALS,HABITAT,FOOD WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Rainforest' RETURNING *;
+
+EXPLAIN EXTENDED DELETE FROM HABITAT USING ANIMALS,HABITAT,FOOD WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Desert' RETURNING *;
+
+EXPLAIN EXTENDED DELETE FROM HABITAT USING ANIMALS,HABITAT,FOOD WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Desert' RETURNING *;
+
+EXPLAIN FORMAT = "json" DELETE FROM HABITAT USING ANIMALS,HABITAT,FOOD WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Antarctica' RETURNING *;
+
+EXPLAIN FORMAT = "json" DELETE FROM HABITAT USING ANIMALS,HABITAT,FOOD WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Antarctica' RETURNING *;
+
+--echo ## Clean Up
+
+drop table ANIMALS;
+drop table FOOD;
+drop table HABITAT;
+--echo drop view COLOR;
+--echo drop view WEIGHT;
+
+## Done
