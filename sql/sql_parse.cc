@@ -4765,6 +4765,7 @@ mysql_execute_command(THD *thd)
     DBUG_ASSERT(first_table == all_tables && first_table != 0);
     TABLE_LIST *aux_tables= thd->lex->auxiliary_table_list.first;
     multi_delete *result;
+    select_result *returning_result= NULL;
     WSREP_SYNC_WAIT(thd, WSREP_SYNC_WAIT_BEFORE_UPDATE_DELETE);
 
     if ((res= multi_delete_precheck(thd, all_tables)))
@@ -4781,7 +4782,32 @@ mysql_execute_command(THD *thd)
       break;
 
     MYSQL_MULTI_DELETE_START(thd->query());
-    if (unlikely(res= mysql_multi_delete_prepare(thd)))
+
+    Protocol* save_protocol=NULL;
+
+      if (lex->has_returning())
+      {
+        //status_var_increment(thd->status_var.feature_delete_returning);
+
+        /* This is DELETE ... RETURNING. It will return output to the client */
+        if (thd->lex->analyze_stmt)
+        {
+          /*
+            Actually, it is ANALYZE .. DELETE .. RETURNING. We need to produce
+            output and then discard it.
+          */
+          returning_result= new (thd->mem_root) select_send_analyze(thd);
+          save_protocol= thd->protocol;
+          thd->protocol= new Protocol_discard(thd);
+        }
+        else
+        {
+          if (!(returning_result= new (thd->mem_root) select_send(thd)))
+            goto error;
+        }
+      }
+
+    if (unlikely(res= mysql_multi_delete_prepare(thd, returning_result)))
     {
       MYSQL_MULTI_DELETE_DONE(1, 0);
       goto error;
@@ -4790,7 +4816,8 @@ mysql_execute_command(THD *thd)
     if (likely(!thd->is_fatal_error))
     {
       result= new (thd->mem_root) multi_delete(thd, aux_tables,
-                                               lex->table_count);
+                                               lex->table_count,
+                                               returning_result);
       if (likely(result))
       {
         if (unlikely(select_lex->vers_setup_conds(thd, aux_tables)))
@@ -4808,6 +4835,12 @@ mysql_execute_command(THD *thd)
         res|= (int)(thd->is_error());
 
         MYSQL_MULTI_DELETE_DONE(res, result->num_deleted());
+        
+        if (save_protocol)
+        {
+          delete thd->protocol;
+          thd->protocol= save_protocol;
+        }
         if (res)
           result->abort_result_set(); /* for both DELETE and EXPLAIN DELETE */
         else
@@ -4817,6 +4850,7 @@ mysql_execute_command(THD *thd)
         }
       multi_delete_error:
         delete result;
+        delete returning_result;
       }
     }
     else
