@@ -1897,7 +1897,8 @@ bool mysql_multi_update(THD *thd, TABLE_LIST *table_list, List<Item> *fields,
                         List<Item> *values, COND *conds, ulonglong options,
                         enum enum_duplicates handle_duplicates,
                         bool ignore, SELECT_LEX_UNIT *unit,
-                        SELECT_LEX *select_lex, multi_update **result)
+                        SELECT_LEX *select_lex, multi_update **result,
+                        select_result *returning_result)
 {
   bool res;
   DBUG_ENTER("mysql_multi_update");
