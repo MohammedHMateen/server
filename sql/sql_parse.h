@@ -39,7 +39,7 @@ my_bool net_allocate_new_packet(NET *net, void *thd, uint my_flags);
 
 bool multi_update_precheck(THD *thd, TABLE_LIST *tables);
 bool multi_delete_precheck(THD *thd, TABLE_LIST *tables);
-int mysql_multi_update_prepare(THD *thd);
+int mysql_multi_update_prepare(THD *thd, select_result *returning_result);
 int mysql_multi_delete_prepare(THD *thd);
 bool mysql_insert_select_prepare(THD *thd,select_result *sel_res);
 bool update_precheck(THD *thd, TABLE_LIST *tables);
