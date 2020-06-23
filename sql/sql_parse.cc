@@ -4429,7 +4429,8 @@ mysql_execute_command(THD *thd)
       multi_update *result_obj;
       select_result *returning_result= NULL;
       MYSQL_MULTI_UPDATE_START(thd->query());
-      Protocol *save_protocol= NULL;
+      Protocol *UNINIT_VAR(save_protocol);
+      bool replaced_protocol= false;
       if (lex->has_returning())
       {
         /*This is UPDATE ... RETURNING.  It will return output to the client*/
@@ -4440,17 +4441,18 @@ mysql_execute_command(THD *thd)
             output and then discard it.
           */
           returning_result= new (thd->mem_root) select_send_analyze(thd);
+          replaced_protocol= true;
           save_protocol= thd->protocol;
           thd->protocol= new Protocol_discard(thd);
         }
         else
         {
-          if (!(returning_result= new (thd->mem_root) select_send(thd)))
+          if (!lex->result_obj && !(returning_result= new (thd->mem_root) select_send(thd)))
             goto error;
         }
       }
 
-      if (save_protocol)
+      if (replaced_protocol)
       {
         delete thd->protocol;
         thd->protocol= save_protocol;
