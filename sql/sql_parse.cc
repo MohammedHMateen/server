@@ -4390,7 +4390,7 @@ mysql_execute_command(THD *thd)
       select_lex->options|= SELECT_DESCRIBE;
     }
 
-    res= mysql_multi_update_prepare(thd);
+    res= mysql_multi_update_prepare(thd,returning_result);
 
 #ifdef HAVE_REPLICATION
     /* Check slave filtering rules */
@@ -4427,7 +4427,35 @@ mysql_execute_command(THD *thd)
 #endif
     {
       multi_update *result_obj;
+      select_result *returning_result= NULL;
       MYSQL_MULTI_UPDATE_START(thd->query());
+      Protocol *save_protocol= NULL;
+      if (lex->has_returning())
+      {
+        /*This is UPDATE ... RETURNING.  It will return output to the client*/
+        if (thd->lex->analyze_stmt)
+        {
+          /* 
+            Actually, it is ANALYZE .. UPDATE .. RETURNING. We need to produce
+            output and then discard it.
+          */
+          returning_result= new (thd->mem_root) select_send_analyze(thd);
+          save_protocol= thd->protocol;
+          thd->protocol= new Protocol_discard(thd);
+        }
+        else
+        {
+          if (!(returning_result= new (thd->mem_root) select_send(thd)))
+            goto error;
+        }
+      }
+
+      if (save_protocol)
+      {
+        delete thd->protocol;
+        thd->protocol= save_protocol;
+      }
+
       res= mysql_multi_update(thd, all_tables,
                               &select_lex->item_list,
                               &lex->value_list,
@@ -4437,13 +4465,15 @@ mysql_execute_command(THD *thd)
                               lex->ignore,
                               unit,
                               select_lex,
-                              &result_obj);
+                              &result_obj,
+                              returning_result);
       if (result_obj)
       {
         MYSQL_MULTI_UPDATE_DONE(res, result_obj->num_found(),
                                 result_obj->num_updated());
         res= FALSE; /* Ignore errors here */
         delete result_obj;
+        delete returning_result;
       }
       else
       {
