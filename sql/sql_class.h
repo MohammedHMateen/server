@@ -6559,6 +6559,7 @@ class multi_update :public select_result_interceptor
   TABLE **tmp_tables, *main_table, *table_to_update;
   TMP_TABLE_PARAM *tmp_table_param;
   ha_rows updated, found;
+  select_result *returning_result;
   List <Item> *fields, *values;
   List <Item> **fields_for_table, **values_for_table;
   uint table_count;
@@ -6590,7 +6591,8 @@ class multi_update :public select_result_interceptor
 public:
   multi_update(THD *thd_arg, TABLE_LIST *ut, List<TABLE_LIST> *leaves_list,
 	       List<Item> *fields, List<Item> *values,
-	       enum_duplicates handle_duplicates, bool ignore);
+	       enum_duplicates handle_duplicates, bool ignore,
+         select_result *returning_result_list);
   ~multi_update();
   int prepare(List<Item> &list, SELECT_LEX_UNIT *u);
   int send_data(List<Item> &items);
