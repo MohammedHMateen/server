@@ -6516,6 +6516,7 @@ class SORT_INFO;
 class multi_delete :public select_result_interceptor
 {
   TABLE_LIST *delete_tables, *table_being_deleted;
+  TABLE_LIST *returning_table; /*Table to return the result set*/
   select_result *returning_result;
   Unique **tempfiles;
   ha_rows deleted, found;
