@@ -1737,7 +1737,7 @@ static bool select_like_stmt_test(Prepared_statement *stmt,
 static bool
 select_like_stmt_test_with_open(Prepared_statement *stmt,
                                 TABLE_LIST *tables,
-                                int (*specific_prepare)(THD *thd),
+                                int (*specific_prepare)(THD *thd, select_result *ret_result),
                                 ulong setup_tables_done_option)
 {
   uint table_count= 0;
