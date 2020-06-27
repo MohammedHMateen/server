@@ -6517,11 +6517,14 @@ class multi_delete :public select_result_interceptor
 {
   TABLE_LIST *delete_tables, *table_being_deleted;
   TABLE_LIST *returning_table; /*Table to return the result set*/
-  select_result *returning_result;
+  select_result *returning_result; /*select result for RETURNING clause*/
+  LIST<Item> *ret_item_list; /*List of returning Items*/
   Unique **tempfiles;
   ha_rows deleted, found;
   uint num_of_tables;
   int error;
+  /* Check if ret_item_list is not empty */
+  bool is_returning; 
   bool do_delete;
   /* True if at least one table we delete from is transactional */
   bool transactional_tables;
@@ -6544,6 +6547,7 @@ public:
   ~multi_delete();
   int prepare(List<Item> &list, SELECT_LEX_UNIT *u);
   int send_data(List<Item> &items);
+  bool send_result_set_metadata(LIST<Item> &list, uint flags);
   bool initialize_tables (JOIN *join);
   int do_deletes();
   int do_table_deletes(TABLE *table, SORT_INFO *sort_info, bool ignore);
