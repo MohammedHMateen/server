@@ -1064,11 +1064,12 @@ extern "C" int refpos_order_cmp(void* arg, const void *a,const void *b)
     TRUE  Error
 */
 
-int mysql_multi_delete_prepare(THD *thd, select_result *returning_result)
+int mysql_multi_delete_prepare(THD *thd)
 {
   LEX *lex= thd->lex;
   TABLE_LIST *aux_tables= lex->auxiliary_table_list.first;
   TABLE_LIST *target_tbl;
+  SELECT_LEX *select_lex= lex->first_select_lex();
   DBUG_ENTER("mysql_multi_delete_prepare");
 
   if (mysql_handle_derived(lex, DT_INIT))
@@ -1095,6 +1096,14 @@ int mysql_multi_delete_prepare(THD *thd, select_result *returning_result)
   if (lex->first_select_lex()->handle_derived(thd->lex, DT_MERGE))
     DBUG_RETURN(TRUE);
 
+  if((select_lex->with_wild && setup_wild(thd, lex->query_tables,
+                                          select_lex->ret_item_list, NULL,
+                                          select_lex->with_wild,
+                                          &select_lex->hidden_bit_fields)) ||
+     (!select_lex->ret_item_list.is_empty()&&setup_fields(thd,Ref_ptr_array(),
+                                          select_lex->ret_item_list,
+                                          MARK_COLUMNS_READ, NULL, NULL, 0)))
+    DBUG_RETURN(TRUE);
   /*
     Multi-delete can't be constructed over-union => we always have
     single SELECT on top and have to check underlying SELECTs of it
@@ -1154,6 +1163,9 @@ multi_delete::multi_delete(THD *thd_arg, TABLE_LIST *dt, uint num_of_tables_arg,
                             select_result *returning_result):
     select_result_interceptor(thd_arg), delete_tables(dt), deleted(0), found(0),
     num_of_tables(num_of_tables_arg), error(0),
+    returning_result(returning_result),
+    ret_item_list(&thd_arg->lex->first_select_lex()->ret_item_list),
+    is_returning(!thd_arg->lex->first_select_lex()->ret_item_list.is_empty()),
     do_delete(0), transactional_tables(0), normal_tables(0), error_handled(0)
 {
   tempfiles= (Unique **) thd_arg->calloc(sizeof(Unique *) * num_of_tables);
@@ -1174,6 +1186,14 @@ multi_delete::prepare(List<Item> &values, SELECT_LEX_UNIT *u)
       DBUG_RETURN(TRUE);
   }
   DBUG_RETURN(0);
+    
+  /*
+    If returning_result is not empty, it means we have items in returning_list.
+    So we prepare the list now
+  */
+  if (returning_result || is_returning)
+    returning_result->prepare(*ret_item_list, NULL);
+
 }
 
 void multi_delete::prepare_to_read_rows()
@@ -1184,6 +1204,16 @@ void multi_delete::prepare_to_read_rows()
     TABLE_LIST *tbl= walk->correspondent_table->find_table_for_update();
     tbl->table->mark_columns_needed_for_delete();
   }
+}
+
+bool multi_delete::send_result_set_metadata(LIST<Item> &list, uint flags)
+{
+  if (returning_result || is_returning)
+    return returning_result->send_result_set_metadata(*ret_item_list,
+                                                      Protocol::SEND_NUM_ROWS|
+                                                      Protocol::SEND_EOF);
+  else
+    return 0;
 }
 
 bool
