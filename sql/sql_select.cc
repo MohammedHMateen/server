@@ -18474,7 +18474,7 @@ bool Create_tmp_table::add_fields(THD *thd,
                          tmp_from_field, &m_default_field[fieldnr],
                          m_group != 0,
                          !param->force_copy_fields &&
-                           (not_all_columns || m_group !=0),
+                           (not_all_columns || m_group !=0 || is_returning),
                          /*
                            If item->marker == 4 then we force create_tmp_field
                            to create a 64-bit longs for BIT fields because HEAP
@@ -18569,6 +18569,7 @@ bool Create_tmp_table::finalize(THD *thd,
   uchar *pos;
   uchar *null_flags;
   KEY *keyinfo;
+  bool is_returning= !thd->lex->first_select_lex()->ret_item_list.is_empty();
   TMP_ENGINE_COLUMNDEF *recinfo;
   TABLE_SHARE  *share= table->s;
   Copy_field *copy= param->copy_field;

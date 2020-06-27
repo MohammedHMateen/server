@@ -1737,7 +1737,7 @@ static bool select_like_stmt_test(Prepared_statement *stmt,
 static bool
 select_like_stmt_test_with_open(Prepared_statement *stmt,
                                 TABLE_LIST *tables,
-                                int (*specific_prepare)(THD *thd, select_result *ret_result),
+                                int (*specific_prepare)(THD *thd),
                                 ulong setup_tables_done_option)
 {
   uint table_count= 0;
@@ -2145,7 +2145,7 @@ error:
     uses local tables lists.
 */
 
-static int mysql_insert_select_prepare_tester(THD *thd)
+static int mysql_insert_select_prepare_tester(THD *thd, select_result *result)
 {
   SELECT_LEX *first_select= thd->lex->first_select_lex();
   TABLE_LIST *second_table= first_select->table_list.first->next_local;
