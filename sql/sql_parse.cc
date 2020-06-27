@@ -4771,7 +4771,7 @@ mysql_execute_command(THD *thd)
     if ((res= multi_delete_precheck(thd, all_tables)))
       break;
 
-    /* condition will be TRUE on SP re-excuting */
+    /* condition will be TRUE on SP re-executing */
     if (select_lex->item_list.elements != 0)
       select_lex->item_list.empty();
     if (add_item_to_list(thd, new (thd->mem_root) Item_null(thd)))
@@ -4783,9 +4783,10 @@ mysql_execute_command(THD *thd)
 
     MYSQL_MULTI_DELETE_START(thd->query());
 
-    Protocol* save_protocol=NULL;
+    Protocol* UNINIT_VAR(save_protocol);
+    bool replaced_protocol= false;
 
-      if (lex->has_returning())
+      if (lex->has_returning() && !select_lex->ret_item_list.is_empty())
       {
         //status_var_increment(thd->status_var.feature_delete_returning);
 
@@ -4797,6 +4798,7 @@ mysql_execute_command(THD *thd)
             output and then discard it.
           */
           returning_result= new (thd->mem_root) select_send_analyze(thd);
+          replaced_protocol= true;
           save_protocol= thd->protocol;
           thd->protocol= new Protocol_discard(thd);
         }
@@ -4807,7 +4809,7 @@ mysql_execute_command(THD *thd)
         }
       }
 
-    if (unlikely(res= mysql_multi_delete_prepare(thd, returning_result)))
+    if (unlikely(res= mysql_multi_delete_prepare(thd))
     {
       MYSQL_MULTI_DELETE_DONE(1, 0);
       goto error;
@@ -4836,7 +4838,7 @@ mysql_execute_command(THD *thd)
 
         MYSQL_MULTI_DELETE_DONE(res, result->num_deleted());
         
-        if (save_protocol)
+        if (replaced_protocol)
         {
           delete thd->protocol;
           thd->protocol= save_protocol;
