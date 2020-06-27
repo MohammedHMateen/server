@@ -1206,7 +1206,7 @@ void multi_delete::prepare_to_read_rows()
   }
 }
 
-bool multi_delete::send_result_set_metadata(LIST<Item> &list, uint flags)
+bool multi_delete::send_result_set_metadata(List<Item> &list, uint flags)
 {
   if (returning_result || is_returning)
     return returning_result->send_result_set_metadata(*ret_item_list,
