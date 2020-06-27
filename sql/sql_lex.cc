@@ -3467,6 +3467,11 @@ List<Item>* st_select_lex::get_item_list()
   return &item_list;
 }
 
+/*List<Item>* st_select_lex::ret_item_list()
+{
+  return &item_list;
+}*/
+
 ulong st_select_lex::get_table_join_options()
 {
   return table_join_options;

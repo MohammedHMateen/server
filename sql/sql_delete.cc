@@ -1180,20 +1180,19 @@ multi_delete::prepare(List<Item> &values, SELECT_LEX_UNIT *u)
   do_delete= 1;
   THD_STAGE_INFO(thd, stage_deleting_from_main_table);
   SELECT_LEX *select_lex= u->first_select();
-  if (select_lex->first_cond_optimization)
-  {
-    if (select_lex->handle_derived(thd->lex, DT_MERGE))
-      DBUG_RETURN(TRUE);
-  }
-  DBUG_RETURN(0);
-    
   /*
     If returning_result is not empty, it means we have items in returning_list.
     So we prepare the list now
   */
   if (returning_result || is_returning)
     returning_result->prepare(*ret_item_list, NULL);
-
+  
+  if (select_lex->first_cond_optimization)
+  {
+    if (select_lex->handle_derived(thd->lex, DT_MERGE))
+      DBUG_RETURN(TRUE);
+  }
+  DBUG_RETURN(0);
 }
 
 void multi_delete::prepare_to_read_rows()
