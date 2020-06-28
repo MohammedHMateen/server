@@ -4770,7 +4770,7 @@ mysql_execute_command(THD *thd)
     if ((res= multi_delete_precheck(thd, all_tables)))
       break;
 
-    /* condition will be TRUE on SP re-excuting */
+    /* condition will be TRUE on SP re-executing */
     if (select_lex->item_list.elements != 0)
       select_lex->item_list.empty();
     if (add_item_to_list(thd, new (thd->mem_root) Item_null(thd)))

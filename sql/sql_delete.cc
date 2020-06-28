@@ -1138,7 +1138,7 @@ int mysql_multi_delete_prepare(THD *thd)
     }
   }
   /*
-    Reset the exclude flag to false so it doesn't interfare
+    Reset the exclude flag to false so it doesn't interfere
     with further calls to unique_table
   */
   lex->first_select_lex()->exclude_from_table_unique_test= FALSE;
@@ -1208,7 +1208,7 @@ multi_delete::initialize_tables(JOIN *join)
       /*
         If the table we are going to delete from appears
         in join, we need to defer delete. So the delete
-        doesn't interfers with the scaning of results.
+        doesn't interfere with the scaning of results.
       */
       delete_while_scanning= false;
     }
@@ -1243,7 +1243,7 @@ multi_delete::initialize_tables(JOIN *join)
     {
       /*
         We are not deleting from the table we are scanning. In this
-        case send_data() shouldn't delete any rows a we may touch
+        case send_data() shouldn't delete any rows as we may touch
         the rows in the deleted table many times
       */
       delete_while_scanning= false;
