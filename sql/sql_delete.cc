@@ -1098,8 +1098,7 @@ int mysql_multi_delete_prepare(THD *thd)
 
   if((select_lex->with_wild && setup_wild(thd, lex->query_tables,
                                           select_lex->ret_item_list, NULL,
-                                          select_lex->with_wild,
-                                          &select_lex->hidden_bit_fields)) ||
+                                          select_lex)) ||
      (!select_lex->ret_item_list.is_empty()&&setup_fields(thd,Ref_ptr_array(),
                                           select_lex->ret_item_list,
                                           MARK_COLUMNS_READ, NULL, NULL, 0)))

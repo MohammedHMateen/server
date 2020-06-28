@@ -2145,7 +2145,7 @@ error:
     uses local tables lists.
 */
 
-static int mysql_insert_select_prepare_tester(THD *thd, select_result *result)
+static int mysql_insert_select_prepare_tester(THD *thd)
 {
   SELECT_LEX *first_select= thd->lex->first_select_lex();
   TABLE_LIST *second_table= first_select->table_list.first->next_local;

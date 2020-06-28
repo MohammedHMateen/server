@@ -4809,7 +4809,7 @@ mysql_execute_command(THD *thd)
         }
       }
 
-    if (unlikely(res= mysql_multi_delete_prepare(thd))
+    if (unlikely(res= mysql_multi_delete_prepare(thd)))
     {
       MYSQL_MULTI_DELETE_DONE(1, 0);
       goto error;
