@@ -62,4 +62,4 @@ drop table HABITAT;
 --echo drop view COLOR;
 --echo drop view WEIGHT;
 
-## Done
+--echo ## Done
