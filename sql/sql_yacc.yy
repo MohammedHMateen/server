@@ -13204,6 +13204,7 @@ single_multi:
           }
           FROM join_table_list opt_where_clause opt_returning
           {
+            Select->ret_item_list.swap(Select->item_list);
             if (unlikely(multi_delete_set_locks_and_link_aux_tables(Lex)))
               MYSQL_YYABORT;
           } stmt_end {}
@@ -13215,6 +13216,7 @@ single_multi:
           }
           USING join_table_list opt_where_clause opt_returning
           {
+            Select->ret_item_list.swap(Select->item_list);
             if (unlikely(multi_delete_set_locks_and_link_aux_tables(Lex)))
               MYSQL_YYABORT;
           } stmt_end {}

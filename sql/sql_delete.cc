@@ -1097,11 +1097,10 @@ int mysql_multi_delete_prepare(THD *thd)
     DBUG_RETURN(TRUE);
 
   if((select_lex->with_wild && setup_wild(thd, lex->query_tables,
-                                          select_lex->ret_item_list, NULL,
-                                          select_lex)) ||
-     (!select_lex->ret_item_list.is_empty()&&setup_fields(thd,Ref_ptr_array(),
-                                          select_lex->ret_item_list,
-                                          MARK_COLUMNS_READ, NULL, NULL, 0)))
+                                          thd->lex->returning()->ret_item_list,
+                                          NULL,thd->lex->returning())) ||
+      (setup_fields(thd,Ref_ptr_array(),thd->lex->returning()->ret_item_list,
+                    MARK_COLUMNS_READ, NULL, NULL, false)))
     DBUG_RETURN(TRUE);
   /*
     Multi-delete can't be constructed over-union => we always have
