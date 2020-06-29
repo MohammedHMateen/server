@@ -4786,7 +4786,7 @@ mysql_execute_command(THD *thd)
     Protocol* UNINIT_VAR(save_protocol);
     bool replaced_protocol= false;
 
-      if (lex->has_returning() && !select_lex->ret_item_list.is_empty())
+      if (!select_lex->ret_item_list.is_empty())
       {
         //status_var_increment(thd->status_var.feature_delete_returning);
 
