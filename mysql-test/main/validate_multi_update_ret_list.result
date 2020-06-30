@@ -1,0 +1,70 @@
+####
+## MDEV-12326: TEST SUITE FOR VALIDATING RETURNING FIELDS IN MULTIPLE TABLE DELETE RETURNING
+####
+
+
+
+## Table and View Creation
+CREATE TABLE ANIMALS (name varchar(40) primary key, colour varchar(20) not null, weight int(4) not null );
+
+CREATE TABLE HABITAT (habitat_name varchar(40) primary key, animal_name varchar(40) not null );
+
+CREATE TABLE FOOD (food_name varchar(20) primary key, animal_name varchar(40) not null );
+
+## Data Insertion
+
+INSERT INTO ANIMALS VALUES ('Penguins','CounterShade',23) , ('Polar Bear','White',450) , ('Toucan','Dark Blue',1) , ('Camel','Brown',600) , ('Reindeer','Grey',200) RETURNING *;
+name	colour	weight
+Penguins	CounterShade	23
+Polar Bear	White	450
+Toucan	Dark Blue	1
+Camel	Brown	600
+Reindeer	Grey	200
+
+INSERT INTO HABITAT VALUES ('Antarctica','Penguins') , ('Arctic','Polar Bear') , ('Rainforest','Toucan') , ('Desert','Camel') , ('Tundra','Reindeer') RETURNING *;
+habitat_name	animal_name
+Antarctica	Penguins
+Arctic	Polar Bear
+Rainforest	Toucan
+Desert	Camel
+Tundra	Reindeer
+
+INSERT INTO FOOD VALUES ('Fish','Penguins') , ('Seals','Polar Bear') , ('Fruits','Toucan') , ('Oats','Camel') , ('Herbs','Reindeer') RETURNING *;
+food_name	animal_name
+Fish	Penguins
+Seals	Polar Bear
+Fruits	Toucan
+Oats	Camel
+Herbs	Reindeer
+
+## MULTIPLE TABLE DELETE RETURNING FIELD TEST CASES
+
+%%Columns ANIMALS.height, HABITAT.weather, etc. are all invalid field names in the RETURNING LIST
+
+UPDATE ANIMALS,FOOD SET ANIMALS.name='Cheetah' WHERE ANIMALS.name=FOOD.animal_name and FOOD.food_name LIKE 'H%' RETURNING ANIMALS.height;
+mysqltest: At line 28: query 'UPDATE ANIMALS,FOOD SET ANIMALS.name='Cheetah' WHERE ANIMALS.name=FOOD.animal_name and FOOD.food_name LIKE 'H%' RETURNING ANIMALS.height' failed: 1054: Unknown column 'ANIMALS.height' in 'field list'
+
+UPDATE ANIMALS,FOOD SET FOOD.animal_name='Cheetah' WHERE ANIMALS.name=FOOD.animal_name and Animals.colour='White' RETURNING ANIMALS.weight,FOOD.food_name,UPPER(FOOD.taste);
+mysqltest: At line 30: query 'UPDATE ANIMALS,FOOD SET FOOD.animal_name='Cheetah' WHERE ANIMALS.name=FOOD.animal_name and Animals.colour='White' RETURNING ANIMALS.weight,FOOD.food_name,UPPER(FOOD.taste)' failed: 1054: Unknown column 'FOOD.taste' in 'field list'
+
+UPDATE ANIMALS,HABITAT,FOOD SET HABITAT.habitat_name= 'Tropical' WHERE ANIMALS.name=FOOD.animal_name and FOOD.food_name LIKE '_Z%' RETURNING HABITAT.weather;
+mysqltest: At line 32: query 'UPDATE ANIMALS,HABITAT,FOOD SET HABITAT.habitat_name= 'Tropical' WHERE ANIMALS.name=FOOD.animal_name and FOOD.food_name LIKE '_Z%' RETURNING HABITAT.weather' failed: 1054: Unknown column 'HABITAT.weather' in 'field list'
+
+UPADTE ANIMALS,HABITAT,FOOD SET FOOD.animal_name='Cheetah', HABITAT.animal_name='Parrot' WHERE ANIMALS.name=FOOD.animal_name and FOOD.food_name LIKE 'H%' RETURNING FOOD.taste+HABITAT.weather;
+mysqltest: At line 34: query 'UPADTE ANIMALS,HABITAT,FOOD SET FOOD.animal_name='Cheetah', HABITAT.animal_name='Parrot' WHERE ANIMALS.name=FOOD.animal_name and FOOD.food_name LIKE 'H%' RETURNING FOOD.taste+HABITAT.weather' failed: 1064: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'UPADTE ANIMALS,HABITAT,FOOD SET FOOD.animal_name='Cheetah', HABITAT.animal_name=' at line 1
+
+EXPLAIN UPDATE ANIMALS,HABITAT,FOOD SET FOOD.food_name='Rice' WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Rainforest' RETURNING name, age;
+mysqltest: At line 36: query 'EXPLAIN UPDATE ANIMALS,HABITAT,FOOD SET FOOD.food_name='Rice' WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Rainforest' RETURNING name, age' failed: 1054: Unknown column 'age' in 'field list'
+
+EXPLAIN EXTENDED UPDATE ANIMALS,HABITAT,FOOD SET ANIMALS.weight= 10 WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Desert' RETURNING FOOD.name;
+mysqltest: At line 38: query 'EXPLAIN EXTENDED UPDATE ANIMALS,HABITAT,FOOD SET ANIMALS.weight= 10 WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Desert' RETURNING FOOD.name' failed: 1054: Unknown column 'FOOD.name' in 'field list'
+
+EXPLAIN FORMAT = "json" UPDATE ANIMALS,HABITAT,FOOD SET ANIMALS.name='Cheetah' WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Antarctica' RETURNING HABITAT.names;
+mysqltest: At line 40: query 'EXPLAIN FORMAT = "json" UPDATE ANIMALS,HABITAT,FOOD SET ANIMALS.name='Cheetah' WHERE ANIMALS.name=FOOD.animal_name and HABITAT.habitat_name = 'Antarctica' RETURNING HABITAT.names' failed: 1054: Unknown column 'HABITAT.names' in 'field list'
+
+## Clean Up
+
+drop table ANIMALS;
+drop table FOOD;
+drop table HABITAT;
+## Done
