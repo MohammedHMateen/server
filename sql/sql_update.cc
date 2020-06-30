@@ -1818,6 +1818,7 @@ int mysql_multi_update_prepare(THD *thd)
   LEX *lex= thd->lex;
   TABLE_LIST *table_list= lex->query_tables;
   TABLE_LIST *tl;
+  SELECT_LEX *select_lex= lex->first_select_lex();
   Multiupdate_prelocking_strategy prelocking_strategy;
   uint table_count= lex->table_count;
   DBUG_ENTER("mysql_multi_update_prepare");
@@ -1876,6 +1877,18 @@ int mysql_multi_update_prepare(THD *thd)
     DBUG_PRINT("info", ("table: %s  want_privilege: %llx", tl->alias.str,
                         (longlong) table->grant.want_privilege));
   }
+
+  if ((select_lex->with_wild && setup_wild(thd, table_list, select_lex->ret_item_list,
+                                            NULL, select_lex->with_wild)) || 
+      (!select_lex->ret_item_list.is_empty() && setup_fields(thd,
+                                                    Ref_ptr_array(),
+                                                    select_lex->ret_item_list,
+                                                    MARK_COLUMNS_READ, NULL,
+                                                    NULL, false)))
+  {
+    DBUG_RETURN(TRUE);
+  }
+  
   /*
     Set exclude_from_table_unique_test value back to FALSE. It is needed for
     further check in multi_update::prepare whether to use record cache.
@@ -1905,7 +1918,8 @@ bool mysql_multi_update(THD *thd, TABLE_LIST *table_list, List<Item> *fields,
 
   if (!(*result= new (thd->mem_root) multi_update(thd, table_list,
                                  &thd->lex->first_select_lex()->leaf_tables,
-                                 fields, values, handle_duplicates, ignore)))
+                                 fields, values, handle_duplicates, ignore,
+                                 returning_result)))
   {
     DBUG_RETURN(TRUE);
   }
@@ -1942,14 +1956,16 @@ multi_update::multi_update(THD *thd_arg, TABLE_LIST *table_list,
                            List<TABLE_LIST> *leaves_list,
 			   List<Item> *field_list, List<Item> *value_list,
 			   enum enum_duplicates handle_duplicates_arg,
-                           bool ignore_arg):
-   select_result_interceptor(thd_arg),
-   all_tables(table_list), leaves(leaves_list), update_tables(0),
-   tmp_tables(0), updated(0), found(0), fields(field_list),
-   values(value_list), table_count(0), copy_field(0),
-   handle_duplicates(handle_duplicates_arg), do_update(1), trans_safe(1),
-   transactional_tables(0), ignore(ignore_arg), error_handled(0), prepared(0),
-   updated_sys_ver(0)
+         bool ignore_arg, select_result *returning_result):
+   select_result_interceptor(thd_arg), all_tables(table_list),
+   leaves(leaves_list), update_tables(0), tmp_tables(0), updated(0), found(0),
+   returning_result(returning_result),
+   ret_item_list(&thd_arg->lex->first_select_lex()->ret_item_list),
+   fields(field_list), values(value_list), table_count(0), copy_field(0),
+   handle_duplicates(handle_duplicates_arg),
+   is_returning(!&thd_arg->lex->first_select_lex()->ret_item_list.is_empty()),
+   do_update(1), trans_safe(1), transactional_tables(0), ignore(ignore_arg),
+   error_handled(0), prepared(0), updated_sys_ver(0)
 {
 }
 
@@ -1989,6 +2005,11 @@ int multi_update::prepare(List<Item> &not_used_values,
     DBUG_RETURN(1);
   }
 
+  if (is_returning)
+  {
+    returning_result->prepare(*ret_item_list, NULL);
+  }
+  
   /*
     We gather the set of columns read during evaluation of SET expression in
     TABLE::tmp_set by pointing TABLE::read_set to it and then restore it after
@@ -2109,6 +2130,18 @@ int multi_update::prepare(List<Item> &not_used_values,
   }
   copy_field= new (thd->mem_root) Copy_field[max_fields];
   DBUG_RETURN(thd->is_fatal_error != 0);
+}
+
+bool multi_update::send_result_set_metadata(List<Item> &list, uint flags)
+{
+  if(is_returning)
+  {
+    return returning_result->send_result_set_metadata(*ret_item_list,
+                                                      Protocol::SEND_NUM_ROWS |
+                                                      Protocol::SEND_EOF);
+  }
+  else
+    return 0;
 }
 
 void multi_update::update_used_tables()
@@ -2622,6 +2655,10 @@ int multi_update::send_data(List<Item> &not_used_values)
 
 void multi_update::abort_result_set()
 {
+  if (is_returning)
+  {
+    returning_result->abort_result_set();
+  }
   /* the error was handled or nothing deleted and no side effects return */
   if (unlikely(error_handled ||
                (!thd->transaction.stmt.modified_non_trans_table && !updated)))
@@ -3028,8 +3065,17 @@ bool multi_update::send_eof()
     thd->first_successful_insert_id_in_prev_stmt : 0;
     my_snprintf(buff, sizeof(buff), ER_THD(thd, ER_UPDATE_INFO),
                 (ulong) found, (ulong) updated, (ulong) thd->cuted_fields);
+    if(is_returning)
+    {
+      returning_result->send_eof();
+    }
+    else
+    {
+      
     ::my_ok(thd, (thd->client_capabilities & CLIENT_FOUND_ROWS) ? found : updated,
             id, buff);
+    }
+    
   }
   DBUG_RETURN(FALSE);
 }
