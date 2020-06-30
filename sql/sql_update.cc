@@ -1878,11 +1878,9 @@ int mysql_multi_update_prepare(THD *thd)
                         (longlong) table->grant.want_privilege));
   }
 
-  if ((select_lex->with_wild && setup_wild(thd, table_list, select_lex->ret_item_list,
-                                            NULL, select_lex->with_wild)) || 
-      (!select_lex->ret_item_list.is_empty() && setup_fields(thd,
-                                                    Ref_ptr_array(),
-                                                    select_lex->ret_item_list,
+  if ((select_lex->with_wild && setup_wild(thd, table_list, thd->lex->returning()->ret_item_list,
+                                            NULL, thd->lex->returning())) || 
+      (setup_fields(thd, Ref_ptr_array(), thd->lex->returning()->ret_item_list,
                                                     MARK_COLUMNS_READ, NULL,
                                                     NULL, false)))
   {
@@ -1963,7 +1961,7 @@ multi_update::multi_update(THD *thd_arg, TABLE_LIST *table_list,
    ret_item_list(&thd_arg->lex->first_select_lex()->ret_item_list),
    fields(field_list), values(value_list), table_count(0), copy_field(0),
    handle_duplicates(handle_duplicates_arg),
-   is_returning(!&thd_arg->lex->first_select_lex()->ret_item_list.is_empty()),
+   is_returning(!thd_arg->lex->first_select_lex()->ret_item_list.is_empty()),
    do_update(1), trans_safe(1), transactional_tables(0), ignore(ignore_arg),
    error_handled(0), prepared(0), updated_sys_ver(0)
 {

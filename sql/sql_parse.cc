@@ -4390,7 +4390,7 @@ mysql_execute_command(THD *thd)
       select_lex->options|= SELECT_DESCRIBE;
     }
 
-    res= mysql_multi_update_prepare(thd,returning_result);
+    res= mysql_multi_update_prepare(thd);
 
 #ifdef HAVE_REPLICATION
     /* Check slave filtering rules */
@@ -4447,7 +4447,7 @@ mysql_execute_command(THD *thd)
         }
         else
         {
-          if (!lex->result_obj && !(returning_result= new (thd->mem_root) select_send(thd)))
+          if (!lex->result && !(returning_result= new (thd->mem_root) select_send(thd)))
             goto error;
         }
       }

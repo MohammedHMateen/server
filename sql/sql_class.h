@@ -6600,7 +6600,7 @@ public:
   ~multi_update();
   int prepare(List<Item> &list, SELECT_LEX_UNIT *u);
   int send_data(List<Item> &items);
-  int send_result_set_metadata(List<Item> &list, uint flags);
+  bool send_result_set_metadata(List<Item> &list, uint flags);
   bool initialize_tables (JOIN *join);
   int prepare2(JOIN *join);
   int  do_updates();
