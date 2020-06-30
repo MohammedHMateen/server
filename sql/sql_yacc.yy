@@ -13084,6 +13084,7 @@ update:
           }
           opt_where_clause opt_order_clause delete_limit_clause opt_returning
           {
+            Select->ret_item_list.swap(Select->item_list);
             if ($10)
               Select->order_list= *($10);
           } stmt_end {}
