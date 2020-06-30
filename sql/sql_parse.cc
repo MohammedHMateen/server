@@ -4431,7 +4431,7 @@ mysql_execute_command(THD *thd)
       MYSQL_MULTI_UPDATE_START(thd->query());
       Protocol *UNINIT_VAR(save_protocol);
       bool replaced_protocol= false;
-      if (lex->has_returning())
+      if (!select_lex->ret_item_list.is_empty())
       {
         /*This is UPDATE ... RETURNING.  It will return output to the client*/
         if (thd->lex->analyze_stmt)
@@ -4452,12 +4452,6 @@ mysql_execute_command(THD *thd)
         }
       }
 
-      if (replaced_protocol)
-      {
-        delete thd->protocol;
-        thd->protocol= save_protocol;
-      }
-
       res= mysql_multi_update(thd, all_tables,
                               &select_lex->item_list,
                               &lex->value_list,
@@ -4469,6 +4463,22 @@ mysql_execute_command(THD *thd)
                               select_lex,
                               &result_obj,
                               returning_result);
+
+      if (replaced_protocol)
+      {
+        delete thd->protocol;
+        thd->protocol= save_protocol;
+      }
+      /* For Analyze and Describe Statements 
+      if (thd->lex->analyze_stmt || thd->lex->describe)
+      {
+        if (!res)
+        {
+          res= thd->lex->explain->send_explain(thd);
+        }
+        
+      }*/
+      
       if (result_obj)
       {
         MYSQL_MULTI_UPDATE_DONE(res, result_obj->num_found(),
