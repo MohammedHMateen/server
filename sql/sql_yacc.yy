@@ -13082,7 +13082,11 @@ update:
             */
             slex->set_lock_for_tables($3, slex->table_list.elements == 1);
           }
-          opt_where_clause opt_order_clause delete_limit_clause opt_returning
+          opt_where_clause opt_order_clause delete_limit_clause
+          {
+            Select->ret_item_list.swap(Select->item_list);
+          }
+          opt_returning
           {
             Select->ret_item_list.swap(Select->item_list);
             if ($10)

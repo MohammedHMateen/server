@@ -1878,14 +1878,15 @@ int mysql_multi_update_prepare(THD *thd)
                         (longlong) table->grant.want_privilege));
   }
 
-  if ((select_lex->with_wild && setup_wild(thd, table_list, thd->lex->returning()->ret_item_list,
-                                            NULL, thd->lex->returning())) || 
+  if ((select_lex->with_wild && setup_wild(thd, table_list,
+                                           thd->lex->returning()->ret_item_list,
+                                           NULL, thd->lex->returning())) || 
       (setup_fields(thd, Ref_ptr_array(), thd->lex->returning()->ret_item_list,
                                                     MARK_COLUMNS_READ, NULL,
                                                     NULL, false)))
-  {
     DBUG_RETURN(TRUE);
-  }
+  
+  
   
   /*
     Set exclude_from_table_unique_test value back to FALSE. It is needed for
